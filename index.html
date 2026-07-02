@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wemos D1 Mini Firmware Uploader</title>
+    <!-- Outfit Font & FontAwesome Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #090d16 0%, #15103c 100%);
+            --card-bg: rgba(22, 28, 45, 0.7);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-cyan: #00f2fe;
+            --accent-cyan-glow: rgba(0, 242, 254, 0.3);
+            --success: #10b981;
+            --danger: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1.5rem;
+        }
+
+        .uploader-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border);
+            border-radius: 1.25rem;
+            padding: 2rem;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        h2 {
+            font-size: 1.35rem;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+        }
+
+        h2 i {
+            color: var(--accent-cyan);
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .select-row {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        select {
+            flex-grow: 1;
+            background: rgba(7, 10, 18, 0.6);
+            border: 1px solid var(--card-border);
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            color: #ffffff;
+            font-family: inherit;
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        select:focus {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 0 2px var(--accent-cyan-glow);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border-radius: 0.5rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .btn-pair {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--card-border);
+            color: var(--text-primary);
+        }
+
+        .btn-pair:hover {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .btn-upload {
+            background: linear-gradient(135deg, var(--accent-cyan) 0%, #7928ca 100%);
+            color: #ffffff;
+            font-size: 1.05rem;
+            padding: 0.9rem;
+            box-shadow: 0 4px 15px rgba(0, 242, 254, 0.2);
+            width: 100%;
+        }
+
+        .btn-upload:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(0, 242, 254, 0.35);
+        }
+
+        .btn-upload:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .progress-section {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            border: 1px solid rgba(255, 255, 255, 0.02);
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.6rem;
+            font-size: 0.9rem;
+        }
+
+        .progress-title {
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .progress-pct {
+            font-weight: 700;
+            color: var(--accent-cyan);
+        }
+
+        .progress-bar-container {
+            height: 8px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 999px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            margin-bottom: 0.6rem;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent-cyan), #7928ca);
+            border-radius: 999px;
+            transition: width 0.15s ease-out;
+        }
+
+        .status-text {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            text-align: center;
+            word-break: break-all;
+        }
+
+        .alert-unsupported {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+            color: #fca5a5;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.85rem;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="uploader-card">
+        <h2><i class="fa-solid fa-bolt"></i> Firmware Uploader</h2>
+
+        <!-- Browser support check -->
+        <div id="compat-alert" class="alert-unsupported hidden">
+            Web Serial API is not supported in this browser. Please use Google Chrome, Edge, or Opera.
+        </div>
+
+        <div class="form-group" id="port-controls">
+            <label for="port-select">Select Serial Port</label>
+            <div class="select-row">
+                <select id="port-select">
+                    <option value="">Scanning ports...</option>
+                </select>
+                <button class="btn btn-pair" id="pair-btn" title="Add a new USB port connection">
+                    <i class="fa-solid fa-plus"></i> Pair Port
+                </button>
+            </div>
+        </div>
+
+        <button class="btn btn-upload" id="upload-btn" disabled>
+            <i class="fa-solid fa-arrow-up-from-bracket"></i> Upload Firmware
+        </button>
+
+        <div class="progress-section">
+            <div class="progress-header">
+                <span class="progress-title">Progress</span>
+                <span class="progress-pct" id="progress-pct">0%</span>
+            </div>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+            <div class="status-text" id="status-text">Loading firmware...</div>
+        </div>
+    </div>
+
+    <!-- ES Module configuration -->
+    <script type="module">
+        import { ESPLoader, Transport } from "https://unpkg.com/esptool-js/bundle.js";
+
+        let ports = [];
+        let precompiledFirmware = null;
+
+        const compatAlert = document.getElementById("compat-alert");
+        const portSelect = document.getElementById("port-select");
+        const pairBtn = document.getElementById("pair-btn");
+        const uploadBtn = document.getElementById("upload-btn");
+        const progressBar = document.getElementById("progress-bar");
+        const progressPct = document.getElementById("progress-pct");
+        const statusText = document.getElementById("status-text");
+
+        // Initialization
+        async function init() {
+            if (!("serial" in navigator)) {
+                compatAlert.classList.remove("hidden");
+                portSelect.disabled = true;
+                pairBtn.disabled = true;
+                uploadBtn.disabled = true;
+                statusText.textContent = "Web Serial API Unsupported.";
+                return;
+            }
+
+            // Load the binary firmware compiled for Wemos D1 Mini
+            try {
+                const response = await fetch("UnifiedCGBOTPRO.ino.bin");
+                if (!response.ok) throw new Error("Could not fetch file");
+                const buffer = await response.arrayBuffer();
+                precompiledFirmware = new Uint8Array(buffer);
+                statusText.textContent = `Firmware ready (${Math.round(precompiledFirmware.byteLength / 1024)} KB)`;
+                validateState();
+            } catch (err) {
+                console.warn(err);
+                if (window.location.protocol === 'file:') {
+                    statusText.textContent = "Error: CORS Blocked. Run a local web server (http://localhost:8080).";
+                } else {
+                    statusText.textContent = "Error: Firmware bin failed to load.";
+                }
+                statusText.style.color = "var(--danger)";
+            }
+
+            // Load already paired ports
+            updatePortsList();
+        }
+
+        // Fetch paired ports list
+        async function updatePortsList() {
+            try {
+                const allPorts = await navigator.serial.getPorts();
+                
+                // Strictly filter to USB serial ports (excluding Bluetooth, audio, etc.)
+                ports = allPorts.filter(port => {
+                    const info = port.getInfo();
+                    return info.usbVendorId !== undefined;
+                });
+                
+                portSelect.innerHTML = "";
+
+                if (ports.length === 0) {
+                    const opt = document.createElement("option");
+                    opt.value = "";
+                    opt.textContent = "No paired USB ports. Click 'Pair Port'.";
+                    portSelect.appendChild(opt);
+                } else {
+                    const nameCounts = {};
+                    ports.forEach((port, idx) => {
+                        const info = port.getInfo();
+                        let baseName = "USB Serial Port";
+                        
+                        const vid = info.usbVendorId;
+                        if (vid === 0x1a86) baseName = "CH340 USB Serial Port";
+                        else if (vid === 0x10c4) baseName = "CP2102 USB Serial Port";
+                        else if (vid === 0x0403) baseName = "FTDI USB Serial Port";
+                        else baseName = "USB Serial Port";
+
+                        nameCounts[baseName] = (nameCounts[baseName] || 0) + 1;
+                        
+                        const opt = document.createElement("option");
+                        opt.value = idx;
+                        opt.textContent = nameCounts[baseName] > 1 
+                            ? `${baseName} (${nameCounts[baseName]})` 
+                            : baseName;
+                        portSelect.appendChild(opt);
+                    });
+                }
+                validateState();
+            } catch (err) {
+                console.error("Error updating ports:", err);
+            }
+        }
+
+        function validateState() {
+            if (ports.length > 0 && precompiledFirmware) {
+                uploadBtn.disabled = false;
+            } else {
+                uploadBtn.disabled = true;
+            }
+        }
+
+        // Pair a new USB port
+        pairBtn.addEventListener("click", async () => {
+            try {
+                await navigator.serial.requestPort();
+                await updatePortsList();
+            } catch (err) {
+                console.warn("User cancelled port selection.", err);
+            }
+        });
+
+        // Upload action
+        uploadBtn.addEventListener("click", async () => {
+            const idx = portSelect.value;
+            if (idx === "" || !ports[idx]) {
+                alert("Please select a valid paired port.");
+                return;
+            }
+
+            const port = ports[idx];
+            uploadBtn.disabled = true;
+            pairBtn.disabled = true;
+            portSelect.disabled = true;
+            
+            progressBar.style.width = "0%";
+            progressPct.textContent = "0%";
+            statusText.textContent = "Connecting to board...";
+            statusText.style.color = "var(--accent-cyan)";
+
+            let transport = null;
+
+            try {
+                transport = new Transport(port, true);
+                const esploader = new ESPLoader({
+                    transport: transport,
+                    baudrate: 460800,
+                    terminal: {
+                        clean() {},
+                        writeLine(d) { console.log(d); },
+                        write(d) { console.log(d); }
+                    }
+                });
+
+                // Handshake with bootloader
+                await esploader.main("default_reset");
+                statusText.textContent = "Uploading firmware...";
+
+                const flashOptions = {
+                    fileArray: [
+                        { data: precompiledFirmware, address: 0x00000 }
+                    ],
+                    flashSize: "keep",
+                    flashMode: "keep",
+                    flashFreq: "keep",
+                    eraseAll: false,
+                    compress: true,
+                    reportProgress: (fileIndex, written, total) => {
+                        const percent = Math.round((written / total) * 100);
+                        progressBar.style.width = `${percent}%`;
+                        progressPct.textContent = `${percent}%`;
+                        statusText.textContent = `Uploading... ${Math.round(written / 1024)} KB / ${Math.round(total / 1024)} KB (${percent}%)`;
+                    }
+                };
+
+                await esploader.writeFlash(flashOptions);
+                
+                progressBar.style.width = "100%";
+                progressPct.textContent = "100%";
+                statusText.textContent = "Uploading successful! Resetting board...";
+                statusText.style.color = "var(--success)";
+
+                // Restart D1 Mini to execute the new app
+                await esploader.after("hard_reset");
+                statusText.textContent = "Upload complete! Device running firmware.";
+                
+                await transport.disconnect();
+            } catch (err) {
+                console.error(err);
+                statusText.textContent = `Failed: ${err.message}`;
+                statusText.style.color = "var(--danger)";
+                
+                if (transport) {
+                    try { await transport.disconnect(); } catch(e) {}
+                }
+            } finally {
+                pairBtn.disabled = false;
+                portSelect.disabled = false;
+                validateState();
+            }
+        });
+
+        // Listen for plug/unplug events
+        navigator.serial.addEventListener("connect", updatePortsList);
+        navigator.serial.addEventListener("disconnect", updatePortsList);
+
+        window.addEventListener("DOMContentLoaded", init);
+    </script>
+</body>
+</html>
